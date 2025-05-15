@@ -1,0 +1,121 @@
+import pandas as pd
+
+# Load dataset from local file
+df = pd.read_csv("tweet_emotions.csv")
+print(df.head())
+import pandas as pd
+import re
+import string
+
+# Load dataset
+df = pd.read_csv("tweet_emotions.csv")  # Replace with full path if needed
+
+# Define text cleaning function
+def clean_text(text):
+    text = re.sub(r"http\\S+|www\\S+", "", text)  # remove URLs
+    text = re.sub(r"@[A-Za-z0-9_]+", "", text)    # remove mentions
+    text = re.sub(r"#[A-Za-z0-9_]+", "", text)    # remove hashtags
+    text = re.sub(r"[^\x00-\x7F]+", "", text)     # remove emojis
+    text = text.translate(str.maketrans("", "", string.punctuation))  # remove punctuation
+    text = text.lower().strip()                   # convert to lowercase and strip whitespace
+    return text
+
+# Apply cleaning to the dataset
+df["cleaned"] = df["content"].apply(clean_text)
+
+# Display the original and cleaned text
+print(df[["content", "cleaned"]].head())
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
+
+# Bar chart of sentiment distribution
+plt.figure(figsize=(10,5))
+sns.countplot(x="sentiment", data=df, order=df["sentiment"].value_counts().index)
+plt.title("Sentiment Distribution")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# WordCloud for each sentiment
+for sentiment in df["sentiment"].unique():
+    wc = WordCloud(width=600, height=400).generate(" ".join(df[df["sentiment"] == sentiment]["cleaned"]))
+    plt.figure(figsize=(6,4))
+    plt.imshow(wc, interpolation='bilinear')
+    plt.axis("off")
+    plt.title(f"WordCloud for {sentiment}")
+    plt.show()
+from sklearn.feature_extraction.text import TfidfVectorizer
+import pandas as pd
+
+# Use TF-IDF to convert cleaned text to numerical features
+vectorizer = TfidfVectorizer(max_features=10, stop_words='english')  # top 10 words only
+X = vectorizer.fit_transform(df["cleaned"])
+
+# Convert sparse matrix to DataFrame for visualization
+tfidf_df = pd.DataFrame(X.toarray(), columns=vectorizer.get_feature_names_out())
+
+# Display the top 5 rows
+print(tfidf_df.head())
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train Logistic Regression model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+from sklearn.metrics import classification_report, confusion_matrix
+
+# Predict and evaluate
+y_pred = model.predict(X_test)
+print(classification_report(y_test, y_pred))
+
+# Confusion Matrix
+sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d')
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
+
+# Load the dataset
+df = pd.read_csv("tweet_emotions.csv")
+df = df[['content', 'sentiment']]
+
+# Function to clean text (optional for word clouds)
+def clean_text(text):
+    import re, string
+    text = re.sub(r"http\S+|www\S+|@[A-Za-z0-9_]+|#[A-Za-z0-9_]+", "", text)
+    text = text.translate(str.maketrans("", "", string.punctuation))
+    return text.lower().strip()
+
+# Clean text
+df["cleaned"] = df["content"].apply(clean_text)
+
+# --- Plot 1: Emotion Distribution ---
+plt.figure(figsize=(10, 6))
+sns.countplot(data=df, x='sentiment', order=df['sentiment'].value_counts().index, palette="Set3")
+plt.title("Distribution of Emotions in Tweets")
+plt.xlabel("Emotion")
+plt.ylabel("Tweet Count")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# --- Plot 2: Word Clouds by Emotion ---
+emotions = df['sentiment'].unique()
+for emotion in emotions:
+    emotion_text = " ".join(df[df['sentiment'] == emotion]['cleaned'])
+    wordcloud = WordCloud(width=800, height=400, background_color='white', colormap='tab10').generate(emotion_text)
+
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis("off")
+    plt.title(f"Word Cloud for {emotion}")
+    plt.tight_layout()
+    plt.show()
